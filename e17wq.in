@@ -1,0 +1,98 @@
+print(date())
+lib1 <- "/home/hodgess/Rlibs"
+library(methods)
+library(sp,lib="/home/hodgess/Rlibs")
+library(gstat,lib.loc=lib1)
+library(rgdal,lib.loc=lib1)
+library(sp,lib=lib1)
+data(meuse)
+em.df <- meuse
+zinc.sim <- log(em.df$zinc)
+coordinates(em.df) <-  ~x+y
+proj4string(em.df) <- CRS("+init=epsg:28992")
+xsim <- seq(from=178605,to=181390,by=1)
+ysim <- seq(from=329714,to=333611,by=1)
+source("efV5.r")
+source("create1.r")
+source("new1.R")
+dyn.load("finit.so")
+dyn.load("fmpia.so")
+dyn.load("fmpib.so")
+dyn.load("freda.so")
+dyn.load("fmpifin.so")
+      rank <- 0
+      ierror <- 0
+      size <- 0
+      comm <- 1
+      int1 <- .Fortran("finit",as.integer(ierror))
+
+xasim <- sample(xsim,replace=TRUE,25000+500)
+yasim <- sample(ysim,replace=TRUE,25000+500)
+zasim <- unique(cbind(xasim,yasim))[1:25000,]
+
+print(str(zasim))
+
+
+
+ms.df <- data.frame(x=zasim[,1],y=zasim[,2],zinc=sample(zinc.sim,replace=TRUE,25000))
+coordinates(ms.df) <- ~x+y
+proj4string(ms.df) <- proj4string(em.df)
+xxz <- efV5(zinc~1,ms.df,verbose=FALSE)
+new2 <- create1(ms.df)
+proj4string(new2) <- proj4string(em.df)
+if(!is.null(xxz$vgm)) {
+print("boo hoo")
+print(xxz$vgm)
+if(sum(xxz$vgm$psill==0.2))stop("Invalid Model")
+file2 <- "file2.txt"
+if(file.exists(file2))file.remove(file2)
+file2 <- file(file2,"w+",blocking=FALSE)
+
+write.table(format(round(ms.df@coords,1),drop0trailing=FALSE),file="file2.txt",col.name=FALSE,row.name=FALSE,quote=FALSE)
+
+
+
+close(file2)
+file3 <- "file3.txt"
+if(file.exists(file3))file.remove(file3)
+file3 <- file(file3,"w+",blocking=FALSE)
+write(ms.df$zinc,file="file3.txt",ncol=1)
+close(file3)
+file4 <- "file4.txt"
+if(file.exists(file4))file.remove(file4)
+file4 <- file(file4,"w+",blocking=FALSE)
+
+write.table(format(new2@coords,drop0trailing=FALSE),file="file4.txt",col.name=FALSE,row.name=FALSE,quote=FALSE)
+
+
+close(file4)
+
+file1 <- "file1.txt"
+if(file.exists(file1))file.remove(file1)
+file1 <- file(file1,"w+",blocking=FALSE)
+write(as.character(xxz$vgm$model[2]),file1,append=TRUE)
+write(xxz$vgm$psill[1],file1,append=TRUE)
+write(xxz$vgm$psill[2],file1,append=TRUE)
+write(xxz$vgm$range[2],file1,append=TRUE)
+write(length(ms.df$zinc),file1,append=TRUE)
+write(length(new2@coords[,1]),file1,append=TRUE)
+write(var(ms.df$zinc),file1,append=TRUE)
+close(file1)
+
+
+
+print("past save")
+print(date())
+fin1 <- .Fortran("fmpifin",as.integer(ierror))
+
+}
+
+
+
+
+
+
+
+
+
+
